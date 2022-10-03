@@ -1,2 +1,2 @@
-# qube
-A Rubik's cube timer for the terminal
+# Qube ⏲️
+A Rubik's cube timer for the terminal.

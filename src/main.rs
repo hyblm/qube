@@ -9,7 +9,13 @@ use crossterm::{
 fn main() -> Result<(), std::io::Error> {
     enable_raw_mode()?;
 
-    println!("Press space to start the timer");
+    let scramble = generate_scramble();
+    for turn in scramble {
+        print!("{}", turn);
+    }
+
+    println!("\nPress space to start the timer");
+
     'main: loop {
         if poll(Duration::from_millis(500)).unwrap() {
             match read()? {
@@ -25,5 +31,4 @@ fn main() -> Result<(), std::io::Error> {
     disable_raw_mode()
 
     //TODO: integrate with figlet fonts
-    //TODO: generate scrambles
 }
