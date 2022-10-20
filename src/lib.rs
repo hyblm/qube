@@ -1,36 +1,34 @@
 use std::{
-    io::{Write, stdout},
+    io::Write,
     time::{Instant, Duration}};
 
 use rand::{distributions::{Distribution, Standard}, Rng};
 
 use crossterm::{queue, execute, cursor, Result,
-    event::{read, poll, Event, KeyCode},
+    event::{read, poll, Event},
     style::{Print, Stylize}};
 
-pub fn timer() -> Result<()> {
+pub fn timer(stdout: &mut std::io::Stdout, times: &mut Vec<f32>) -> Result<()> {
     let start_instant = Instant::now();
     let mut timer;
     let mut time;
+    let mut time_string;
     'timer: loop {
         timer = start_instant.elapsed();
-        time = format!("{:.2}", timer.as_secs_f32());
+        time = timer.as_secs_f32();
+        time_string = format!("{:.2}", time);
 
-        render_time(time)?;
+        render_time(stdout, time_string)?;
 
         if poll(Duration::from_millis(10)).unwrap() {
-            match read()? {
-                Event::Key(key) => match key.code {
-                    KeyCode::Char('q') => break 'timer,
-                    _ => (),
-                },
-                _ => (),
-            };
+            if let Event::Key(_key) = read()? { 
+                times.insert(0, time);
+                break 'timer };
         };
     }
-    execute!(stdout(),
+    execute!(stdout,
         cursor::Show,
-        cursor::MoveDown(7),
+        cursor::MoveDown(9),
     )?;
     Ok(())
 }
@@ -45,12 +43,11 @@ const DIGITS : [[&str; 11]; 7] = [
     ["┗━┛ ","  ╹  "," ┗━━ ", " ┗━┛ ","   ╹ "," ┗━┛ "," ┗━┛ ","   ╹ "," ┗━┛ "," ┗━┛ ","   "],
 ];
 
-fn render_time(time: String) -> Result<()> {
-    let mut stdout = stdout();
+pub fn render_time(stdout: &mut std::io::Stdout, time: String) -> Result<()> {
     execute!(
         stdout,
         cursor::Hide,
-        cursor::MoveToColumn(1),
+        cursor::MoveToColumn(0),
         cursor::SavePosition,
     )?;
 
@@ -64,8 +61,7 @@ fn render_time(time: String) -> Result<()> {
             queue!(stdout, Print(row[col].magenta()))?;
         }
         queue!(stdout,
-            cursor::MoveToColumn(1),
-            cursor::MoveDown(1),
+            cursor::MoveToNextLine(1),
         )?;
     }
     stdout.flush()?;
@@ -101,12 +97,12 @@ impl Face {
     }
     pub fn to_char(&self) -> char {
         match self {
-             Face::Front => 'F',
-             Face::Back => 'B',
-             Face::Right => 'R',
-             Face::Left => 'L',
-             Face::Up => 'U',
-             Face::Down => 'D',
+            Face::Front => 'F',
+            Face::Back => 'B',
+            Face::Right => 'R',
+            Face::Left => 'L',
+            Face::Up => 'U',
+            Face::Down => 'D',
         }
     }
 }
@@ -126,19 +122,18 @@ impl Distribution<Face> for Standard {
 }
 
 /* impl std::fmt::Display for Face {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-             Face::Front => write!("F"),
-             Face::Back => write!('B'),
-             Face::Right => write!('R'),
-             Face::Left => write!('L'),
-             Face::Up => write!('U'),
-             Face::Down => write!('D'),
-        }
-    }
+fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+match self {
+Face::Front => write!("F"),
+Face::Back => write!('B'),
+Face::Right => write!('R'),
+Face::Left => write!('L'),
+Face::Up => write!('U'),
+Face::Down => write!('D'),
+}
+}
 } */
 
-//TODO: generate scrambles
 pub enum Form {
     Clockwise,
     CounterClockwise,
@@ -147,9 +142,9 @@ pub enum Form {
 impl Form {
     pub fn to_str(&self) -> &str {
         match self {
-           Form::Clockwise => "",
-           Form::CounterClockwise => "'",
-           Form::Double => "2",
+            Form::Clockwise => "",
+            Form::CounterClockwise => "'",
+            Form::Double => "2",
         }
     }
 }
@@ -177,7 +172,7 @@ pub fn generate_scramble() -> Vec<Move> {
 
     let mut face = rand::random::<Face>();
     scramble.push(Move{face, form: rand::random::<Form>()});
-    
+
 
     for i in 1..20 {
 
@@ -187,9 +182,37 @@ pub fn generate_scramble() -> Vec<Move> {
                 break;
             }
         }
-        
+
         scramble.push(Move{ face, form: rand::random::<Form>()});
 
     }
     scramble
+}
+
+pub fn init_screen(stdout: &mut std::io::Stdout) -> Result<()> {
+    execute!(
+        stdout,
+        cursor::MoveToNextLine(1),
+        cursor::SavePosition,
+    )?;
+    render_time(stdout, "0:00".to_string())?;
+
+    execute!(stdout,
+        cursor::MoveDown(7),
+    )?;
+
+    for turn in generate_scramble() {
+        print!("{} ", turn);
+    }
+    execute!(stdout, cursor::MoveToNextLine(1))?;
+
+    println!("Press space to start the timer, Q to quit");
+
+    execute!(stdout, cursor::RestorePosition)?;
+
+    Ok(())
+}
+
+pub fn average(times: &[f32]) -> f32 {
+    times.iter().sum::<f32>() / (times.len() as f32 - 1.0)
 }
