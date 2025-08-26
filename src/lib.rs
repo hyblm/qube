@@ -1,13 +1,21 @@
 use std::{
     io::Write,
-    time::{Instant, Duration}};
+    time::{Duration, Instant},
+};
 
-use rand::{distributions::{Distribution, Standard}, Rng};
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
 
-use crossterm::{queue, execute, cursor, Result,
-    event::{read, poll, Event},
+use crossterm::{
+    cursor,
+    event::{poll, read, Event},
+    execute, queue,
+    style::{Color, Print, ResetColor, SetForegroundColor, Stylize},
     terminal::{Clear, ClearType},
-    style::{Print, Stylize, SetForegroundColor, ResetColor, Color}};
+    Result,
+};
 
 pub fn timer(stdout: &mut std::io::Stdout, times: &mut Vec<f32>) -> Result<()> {
     let start_instant = Instant::now();
@@ -17,25 +25,25 @@ pub fn timer(stdout: &mut std::io::Stdout, times: &mut Vec<f32>) -> Result<()> {
         render_time(stdout, format!("{:.2}", time))?;
 
         if poll(Duration::from_millis(10)).unwrap() {
-            if let Event::Key(_key) = read()? { 
+            if let Event::Key(_key) = read()? {
                 times.push(time);
-                break 'timer };
+                break 'timer;
+            };
         };
     }
-    execute!(stdout,
-        cursor::Show,
-    )?;
+    execute!(stdout, cursor::Show,)?;
     Ok(())
 }
 
-const DIGITS : [[&str; 11]; 7] = [
-    ["┏━┓ ","  ╻  "," ┏━┓ ", " ┏━┓ "," ╻ ╻ "," ┏━┓ "," ┏   "," ┏━┓ "," ┏━┓ "," ┏━┓ ","   "],
-    ["┃ ┃ ","  ┃  ","   ┃ ", "   ┃ "," ┃ ┃ "," ┃   "," ┃   ","   ┃ "," ┃ ┃ "," ┃ ┃ "," ╻ "],
-    ["┃ ┃ ","  ┃  ","   ┃ ", "   ┃ "," ┃ ┃ "," ┃   "," ┃   ","   ┃ "," ┃ ┃ "," ┃ ┃ ","   "],
-    ["┃ ┃ ","  ┃  "," ┏━┛ ", " ┣━┫ "," ┗━┫ "," ┗━┓ "," ┣━┓ ","   ┃ "," ┣━┫ "," ┗━┫ ","   "],
-    ["┃ ┃ ","  ┃  "," ┃   ", "   ┃ ","   ┃ ","   ┃ "," ┃ ┃ ","   ┃ "," ┃ ┃ ","   ┃ ","   "],
-    ["┃ ┃ ","  ┃  "," ┃   ", "   ┃ ","   ┃ ","   ┃ "," ┃ ┃ ","   ┃ "," ┃ ┃ ","   ┃ "," ╹ "],
-    ["┗━┛ ","  ╹  "," ┗━━ ", " ┗━┛ ","   ╹ "," ┗━┛ "," ┗━┛ ","   ╹ "," ┗━┛ "," ┗━┛ ","   "],
+#[rustfmt::skip]
+const DIGITS: [[&str; 11]; 7] = [
+    [ "┏━┓ ", "  ╻  ", " ┏━┓ ", " ┏━┓ ", " ╻ ╻ ", " ┏━┓ ", " ┏   ", " ┏━┓ ", " ┏━┓ ", " ┏━┓ ", "   ", ],
+    [ "┃ ┃ ", "  ┃  ", "   ┃ ", "   ┃ ", " ┃ ┃ ", " ┃   ", " ┃   ", "   ┃ ", " ┃ ┃ ", " ┃ ┃ ", " ╻ ", ],
+    [ "┃ ┃ ", "  ┃  ", "   ┃ ", "   ┃ ", " ┃ ┃ ", " ┃   ", " ┃   ", "   ┃ ", " ┃ ┃ ", " ┃ ┃ ", "   ", ],
+    [ "┃ ┃ ", "  ┃  ", " ┏━┛ ", " ┣━┫ ", " ┗━┫ ", " ┗━┓ ", " ┣━┓ ", "   ┃ ", " ┣━┫ ", " ┗━┫ ", "   ", ],
+    [ "┃ ┃ ", "  ┃  ", " ┃   ", "   ┃ ", "   ┃ ", "   ┃ ", " ┃ ┃ ", "   ┃ ", " ┃ ┃ ", "   ┃ ", "   ", ],
+    [ "┃ ┃ ", "  ┃  ", " ┃   ", "   ┃ ", "   ┃ ", "   ┃ ", " ┃ ┃ ", "   ┃ ", " ┃ ┃ ", "   ┃ ", " ╹ ", ],
+    [ "┗━┛ ", "  ╹  ", " ┗━━ ", " ┗━┛ ", "   ╹ ", " ┗━┛ ", " ┗━┛ ", "   ╹ ", " ┗━┛ ", " ┗━┛ ", "   ", ],
 ];
 
 pub fn render_time(stdout: &mut std::io::Stdout, time: String) -> Result<()> {
@@ -55,11 +63,9 @@ pub fn render_time(stdout: &mut std::io::Stdout, time: String) -> Result<()> {
             };
             queue!(stdout, Print(row[col].magenta()))?;
         }
-        queue!(stdout,
-            cursor::MoveToNextLine(1),
-        )?;
+        queue!(stdout, cursor::MoveToNextLine(1),)?;
     }
-    queue!( stdout, cursor::RestorePosition)?;
+    queue!(stdout, cursor::RestorePosition)?;
 
     stdout.flush()?;
 
@@ -137,7 +143,10 @@ impl Distribution<Mod> for Standard {
     }
 }
 
-pub struct Move {pub face: Face, pub form: Mod}
+pub struct Move {
+    pub face: Face,
+    pub form: Mod,
+}
 impl std::fmt::Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", self.face.to_str(), self.form.to_str())
@@ -146,14 +155,19 @@ impl std::fmt::Display for Move {
 
 pub fn generate_scramble() -> Vec<Move> {
     let mut scramble = Vec::new();
-    scramble.push(Move{face: rand::random::<Face>(), form: rand::random::<Mod>()});
+    scramble.push(Move {
+        face: rand::random::<Face>(),
+        form: rand::random::<Mod>(),
+    });
 
     for i in 1..20 {
         loop {
             let face = rand::random::<Face>();
-            if face != scramble[i-1].face &&
-               face != scramble[i-1].face.opposite() {
-                scramble.push(Move{face, form: rand::random::<Mod>()});
+            if face != scramble[i - 1].face && face != scramble[i - 1].face.opposite() {
+                scramble.push(Move {
+                    face,
+                    form: rand::random::<Mod>(),
+                });
                 break;
             }
         }
@@ -175,11 +189,18 @@ pub fn init_screen(stdout: &mut std::io::Stdout, time: &f32) -> Result<()> {
     for turn in generate_scramble() {
         match turn.face {
             Face::Front => queue!(stdout, SetForegroundColor(Color::Green))?,
-            Face::Back  => queue!(stdout, SetForegroundColor(Color::Blue))?,
+            Face::Back => queue!(stdout, SetForegroundColor(Color::Blue))?,
             Face::Right => queue!(stdout, SetForegroundColor(Color::Red))?,
-            Face::Left  => queue!(stdout, SetForegroundColor(Color::Rgb { r: 200, g: 130, b: 50 }))?,
-            Face::Up    => queue!(stdout, SetForegroundColor(Color::White))?,
-            Face::Down  => queue!(stdout, SetForegroundColor(Color::Yellow))?,
+            Face::Left => queue!(
+                stdout,
+                SetForegroundColor(Color::Rgb {
+                    r: 200,
+                    g: 130,
+                    b: 50
+                })
+            )?,
+            Face::Up => queue!(stdout, SetForegroundColor(Color::White))?,
+            Face::Down => queue!(stdout, SetForegroundColor(Color::Yellow))?,
         }
         queue!(stdout, Print(format!("{} ", turn).bold()))?;
     }
